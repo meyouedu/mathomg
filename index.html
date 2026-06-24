@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="description" content="MathOMG — AI math tutor that finally explains it in a way that makes sense">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MathOMG">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>MathOMG — AI Math Tutor</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --surface3: #252535;
+    --border: #2a2a3d;
+    --accent: #7c6af7;
+    --accent2: #f7a26a;
+    --accent3: #6af7c8;
+    --text: #e8e8f0;
+    --text2: #9090aa;
+    --text3: #5a5a72;
+    --glow: rgba(124,106,247,0.18);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; animation: drift 12s ease-in-out infinite alternate; }
+  .bg-orb1 { width: 500px; height: 500px; background: rgba(124,106,247,0.08); top: -100px; left: -100px; }
+  .bg-orb2 { width: 400px; height: 400px; background: rgba(247,162,106,0.06); bottom: -50px; right: -50px; animation-delay: -4s; }
+  .bg-orb3 { width: 300px; height: 300px; background: rgba(106,247,200,0.05); top: 40%; left: 50%; animation-delay: -8s; }
+  @keyframes drift { from { transform: translate(0,0); } to { transform: translate(30px,20px); } }
+
+  .app { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* ── INSTALL BANNER ── */
+  .install-banner {
+    display: none; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, rgba(124,106,247,0.15), rgba(247,162,106,0.1));
+    border: 1px solid rgba(124,106,247,0.3);
+    border-radius: 14px; padding: 12px 18px; margin-bottom: 20px; gap: 12px;
+  }
+  .install-banner.visible { display: flex; }
+  .install-banner-text { font-size: 0.85rem; color: var(--text2); }
+  .install-banner-text strong { color: var(--text); }
+  .btn-install {
+    background: var(--accent); border: none; border-radius: 10px;
+    color: white; font-family: 'Sora', sans-serif; font-weight: 700;
+    font-size: 0.8rem; padding: 8px 16px; cursor: pointer; white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-install:hover { background: #6d5ce7; }
+  .btn-dismiss { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; padding: 0 4px; }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 0 24px; border-bottom: 1px solid var(--border); margin-bottom: 28px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; box-shadow: 0 0 24px var(--glow);
+  }
+  .logo-wordmark { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-wordmark .omg { color: var(--accent2); }
+  .logo-sub { font-size: 0.68rem; color: var(--text3); font-weight: 400; margin-top: 1px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .header-stats { display: flex; gap: 12px; }
+  .stat-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 14px; font-size: 0.78rem; color: var(--text2);
+  }
+  .stat-pill strong { color: var(--text); font-weight: 600; }
+
+  /* ── XP BAR ── */
+  .xp-bar {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 20px; margin-bottom: 24px;
+  }
+  .xp-icon { font-size: 22px; }
+  .xp-info { flex: 1; }
+  .xp-info-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .xp-label { font-size: 0.78rem; font-weight: 600; }
+  .xp-value { font-size: 0.78rem; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .xp-track { background: var(--surface3); border-radius: 4px; height: 6px; overflow: hidden; }
+  .xp-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .streak-badge {
+    background: rgba(247,162,106,0.1); border: 1px solid rgba(247,162,106,0.3);
+    border-radius: 10px; padding: 6px 12px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: var(--accent2); font-weight: 600;
+  }
+
+  /* ── SUBJECT TABS ── */
+  .subject-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .subject-tab {
+    padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); font-family: 'Sora', sans-serif;
+    font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+  }
+  .subject-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .subject-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 0 15px rgba(124,106,247,0.4); }
+
+  /* ── INPUT PANEL ── */
+  .input-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.3); margin-bottom: 24px; transition: border-color 0.2s;
+  }
+  .input-panel:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+  .input-top { padding: 18px 20px 0; }
+  textarea#problem-input {
+    width: 100%; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: 'Sora', sans-serif;
+    font-size: 1rem; resize: none; min-height: 80px; line-height: 1.6;
+  }
+  textarea#problem-input::placeholder { color: var(--text3); }
+  .input-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-top: 1px solid var(--border); margin-top: 10px; gap: 10px;
+  }
+  .input-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn-icon {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: all 0.2s; color: var(--text2);
+  }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+  .mode-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); font-family: 'Sora', sans-serif;
+    font-size: 0.78rem; border-radius: 10px; padding: 6px 10px; cursor: pointer; outline: none;
+  }
+  .btn-solve {
+    background: linear-gradient(135deg, var(--accent), #a78bfa); border: none; border-radius: 12px;
+    color: #fff; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 0.9rem;
+    padding: 10px 24px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(124,106,247,0.4);
+  }
+  .btn-solve:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(124,106,247,0.55); }
+  .btn-solve:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .upload-area {
+    display: none; border: 2px dashed var(--border); border-radius: 14px;
+    padding: 28px; text-align: center; color: var(--text3); font-size: 0.88rem;
+    cursor: pointer; transition: all 0.2s; margin: 0 0 10px;
+  }
+  .upload-area:hover, .upload-area.drag { border-color: var(--accent); color: var(--accent); }
+  .upload-area.active { display: block; }
+  #file-input { display: none; }
+
+  /* ── QUICK EXAMPLES ── */
+  .quick-label { font-size: 0.75rem; color: var(--text3); margin-bottom: 10px; }
+  .quick-examples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+  .quick-pill {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; font-size: 0.78rem; color: var(--text2); cursor: pointer;
+    transition: all 0.15s; font-family: 'JetBrains Mono', monospace;
+  }
+  .quick-pill:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── LOADING ── */
+  .loading-overlay { display: none; text-align: center; padding: 50px 24px; }
+  .loading-overlay.visible { display: block; }
+  .loader-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+  .loader-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: bounce 0.8s ease infinite; }
+  .loader-dots span:nth-child(2) { animation-delay: 0.15s; background: var(--accent2); }
+  .loader-dots span:nth-child(3) { animation-delay: 0.3s; background: var(--accent3); }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  .loader-text { color: var(--text2); font-size: 0.9rem; }
+  .loader-sub { color: var(--text3); font-size: 0.78rem; margin-top: 6px; }
+
+  /* ── SOLUTION PANEL ── */
+  .solution-panel {
+    display: none; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden; box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+    animation: slideUp 0.35s ease;
+  }
+  .solution-panel.visible { display: block; }
+  @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+  .sol-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(124,106,247,0.07), transparent);
+  }
+  .sol-title { font-weight: 700; font-size: 0.95rem; }
+  .sol-title span { color: var(--accent); }
+  .sol-controls { display: flex; gap: 8px; }
+  .btn-sm {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); font-family: 'Sora', sans-serif; font-size: 0.75rem;
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active { background: rgba(124,106,247,0.15); border-color: var(--accent); color: var(--accent); }
+
+  .problem-display { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .problem-label { font-size: 0.72rem; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .problem-text { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: var(--accent2); font-weight: 500; }
+
+  /* ── STEPS ── */
+  .steps-container { padding: 24px; }
+  .step-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; margin-bottom: 14px; overflow: hidden;
+    transition: border-color 0.2s; animation: stepIn 0.4s ease both;
+  }
+  @keyframes stepIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+  .step-card:hover { border-color: var(--accent); }
+  .step-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; }
+  .step-num {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700; color: white; box-shadow: 0 0 12px rgba(124,106,247,0.4);
+  }
+  .step-title-text { font-weight: 600; font-size: 0.9rem; flex: 1; }
+  .step-math { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--accent3); margin-left: auto; padding: 3px 10px; background: rgba(106,247,200,0.08); border-radius: 6px; }
+  .step-chevron { color: var(--text3); font-size: 12px; transition: transform 0.2s; }
+  .step-card.open .step-chevron { transform: rotate(180deg); }
+  .step-body { display: none; padding: 14px 18px 16px; border-top: 1px solid var(--border); }
+  .step-card.open .step-body { display: block; }
+  .step-why { font-size: 0.85rem; color: var(--text2); line-height: 1.7; margin-bottom: 10px; }
+  .step-why .highlight { color: var(--accent2); font-weight: 600; }
+  .step-audio-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .play-btn {
+    background: rgba(124,106,247,0.15); border: 1px solid var(--accent);
+    border-radius: 50%; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; color: var(--accent); transition: all 0.2s;
+  }
+  .play-btn:hover { background: rgba(124,106,247,0.3); }
+  .play-btn.playing { background: var(--accent); color: white; animation: pulse 1s ease infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(124,106,247,0.4); } 50% { box-shadow: 0 0 0 8px rgba(124,106,247,0); } }
+  .audio-label { font-size: 0.73rem; color: var(--text3); }
+
+  .answer-box {
+    margin: 0 24px 20px; background: linear-gradient(135deg, rgba(106,247,200,0.07), rgba(124,106,247,0.07));
+    border: 1px solid rgba(106,247,200,0.25); border-radius: 14px; padding: 18px 22px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .answer-icon { font-size: 28px; }
+  .answer-label { font-size: 0.72rem; color: var(--accent3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .answer-value { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; font-weight: 700; color: var(--text); }
+
+  .explain-modes { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px 20px; }
+  .mode-btn {
+    background: transparent; border: 1px dashed var(--border); border-radius: 8px;
+    padding: 7px 14px; font-family: 'Sora', sans-serif; font-size: 0.78rem;
+    color: var(--text2); cursor: pointer; transition: all 0.2s;
+  }
+  .mode-btn:hover { border-style: solid; border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── CHAT ── */
+  .followup-section { border-top: 1px solid var(--border); padding: 20px 24px; }
+  .followup-label { font-size: 0.75rem; color: var(--text3); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .chat-messages { margin-bottom: 14px; max-height: 220px; overflow-y: auto; }
+  .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; animation: fadeMsg 0.3s ease; }
+  @keyframes fadeMsg { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+  .chat-avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .chat-avatar.ai { background: linear-gradient(135deg, var(--accent), #a78bfa); }
+  .chat-avatar.user { background: var(--surface3); border: 1px solid var(--border); }
+  .chat-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 9px 14px; font-size: 0.85rem; line-height: 1.6; max-width: 85%; }
+  .chat-bubble.user { background: rgba(124,106,247,0.1); border-color: rgba(124,106,247,0.3); }
+  .followup-input-row { display: flex; gap: 8px; }
+  #followup-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-family: 'Sora', sans-serif;
+    font-size: 0.85rem; padding: 10px 14px; outline: none; transition: border-color 0.2s;
+  }
+  #followup-input:focus { border-color: var(--accent); }
+  #followup-input::placeholder { color: var(--text3); }
+  .btn-ask { background: var(--accent); border: none; border-radius: 10px; color: white; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 0.82rem; padding: 10px 16px; cursor: pointer; transition: all 0.2s; }
+  .btn-ask:hover { background: #6d5ce7; }
+  .btn-ask:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 100; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 18px; font-size: 0.85rem; box-shadow: 0 8px 30px rgba(0,0,0,0.5); transform: translateY(80px); opacity: 0; transition: all 0.3s; pointer-events: none; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 3px solid var(--accent3); }
+
+  @media (max-width: 600px) {
+    .header-stats { display: none; }
+    .logo-wordmark { font-size: 1.2rem; }
+    .sol-controls .btn-sm span { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb bg-orb1"></div>
+<div class="bg-orb bg-orb2"></div>
+<div class="bg-orb bg-orb3"></div>
+
+<div class="app">
+
+  <!-- INSTALL BANNER -->
+  <div class="install-banner" id="install-banner">
+    <div class="install-banner-text"><strong>📱 Add MathOMG to your home screen</strong> — use it like a real app, offline too!</div>
+    <button class="btn-install" id="install-btn">Install App</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">✕</button>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🤯</div>
+      <div>
+        <div class="logo-wordmark">Math<span class="omg">OMG</span></div>
+        <div class="logo-sub">AI Math Tutor</div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill">⚡ <strong id="xp-display">0</strong> XP</div>
+      <div class="stat-pill">🔥 <strong id="streak-display">1</strong> day</div>
+      <div class="stat-pill">✅ <strong id="solved-display">0</strong> solved</div>
+    </div>
+  </header>
+
+  <!-- XP BAR -->
+  <div class="xp-bar">
+    <span class="xp-icon">🎯</span>
+    <div class="xp-info">
+      <div class="xp-info-top">
+        <span class="xp-label">Level <span id="level-num">1</span> — <span id="level-title">Algebra Explorer</span></span>
+        <span class="xp-value"><span id="xp-cur">0</span> / <span id="xp-next">100</span> XP</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+    </div>
+    <div class="streak-badge">🔥 <span id="streak2">1</span>-day streak</div>
+  </div>
+
+  <!-- SUBJECT TABS -->
+  <div class="subject-bar">
+    <button class="subject-tab active" onclick="setSubject(this,'Algebra')">Algebra</button>
+    <button class="subject-tab" onclick="setSubject(this,'Geometry')">Geometry</button>
+    <button class="subject-tab" onclick="setSubject(this,'Algebra II')">Algebra II</button>
+    <button class="subject-tab" onclick="setSubject(this,'Pre-Calculus')">Pre-Calculus</button>
+  </div>
+
+  <!-- INPUT PANEL -->
+  <div class="input-panel">
+    <div class="input-top">
+      <textarea id="problem-input" rows="3" placeholder="Drop your math problem here... e.g. Solve 2x + 5 = 13, or factor x² - 5x + 6"></textarea>
+    </div>
+    <div class="upload-area" id="upload-area"
+      ondrop="handleDrop(event)"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      onclick="document.getElementById('file-input').click()">
+      📸 Drop a photo of your worksheet, or tap to upload
+      <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(event)">
+    </div>
+    <div class="input-bottom">
+      <div class="input-actions">
+        <div class="btn-icon" title="Upload photo" onclick="toggleUpload()">📷</div>
+        <div class="btn-icon" title="Clear" onclick="clearAll()">🗑️</div>
+        <select class="mode-select" id="explain-mode">
+          <option value="normal">Normal explanation</option>
+          <option value="simple">Explain it simpler</option>
+          <option value="stepbystep">Step-by-step breakdown</option>
+          <option value="new">Explain like I'm new to this</option>
+        </select>
+      </div>
+      <button class="btn-solve" id="solve-btn" onclick="solveProblem()">🤯 Solve it</button>
+    </div>
+  </div>
+
+  <!-- QUICK EXAMPLES -->
+  <div>
+    <div class="quick-label">✨ Try an example:</div>
+    <div class="quick-examples" id="quick-examples"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loading">
+    <div class="loader-dots"><span></span><span></span><span></span></div>
+    <div class="loader-text" id="loader-text">Working it out...</div>
+    <div class="loader-sub">Your tutor is breaking it down 🤙</div>
+  </div>
+
+  <!-- SOLUTION PANEL -->
+  <div class="solution-panel" id="solution-panel">
+    <div class="sol-header">
+      <div class="sol-title">Here's how we <span>crack this one</span> 👇</div>
+      <div class="sol-controls">
+        <button class="btn-sm" id="audio-all-btn" onclick="playAllAudio()">🔊 <span>Play All</span></button>
+        <button class="btn-sm" onclick="solveProblem()">🔄 <span>Re-explain</span></button>
+      </div>
+    </div>
+    <div class="problem-display">
+      <div class="problem-label">Problem</div>
+      <div class="problem-text" id="problem-display-text"></div>
+    </div>
+    <div class="steps-container" id="steps-container"></div>
+    <div class="answer-box">
+      <div class="answer-icon">✅</div>
+      <div>
+        <div class="answer-label">Final Answer</div>
+        <div class="answer-value" id="answer-value">—</div>
+      </div>
+    </div>
+    <div class="explain-modes">
+      <div style="width:100%;font-size:0.72rem;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Need a different vibe?</div>
+      <button class="mode-btn" onclick="reExplain('simple')">🧸 Explain it simpler</button>
+      <button class="mode-btn" onclick="reExplain('stepbystep')">📋 More step-by-step</button>
+      <button class="mode-btn" onclick="reExplain('new')">👶 I'm totally new to this</button>
+      <button class="mode-btn" onclick="reExplain('visual')">🎨 Give me an analogy</button>
+    </div>
+    <div class="followup-section">
+      <div class="followup-label">💬 Got questions? Ask away</div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="followup-input-row">
+        <input type="text" id="followup-input" placeholder="e.g. Wait, why did we do that in step 2?" onkeydown="if(event.key==='Enter')askFollowup()">
+        <button class="btn-ask" id="ask-btn" onclick="askFollowup()">Ask →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const API_URL = 'https://api.anthropic.com/v1/messages';
+// API key stored in localStorage — set once via the prompt below
+let ANTHROPIC_KEY = localStorage.getItem('mathomg_key') || '';
+
+// ── STATE ──
+let currentSubject = 'Algebra';
+let currentProblem = '';
+let currentSolution = null;
+let xp = parseInt(localStorage.getItem('mathomg_xp') || '0');
+let streak = parseInt(localStorage.getItem('mathomg_streak') || '1');
+let solved = parseInt(localStorage.getItem('mathomg_solved') || '0');
+let deferredInstallPrompt = null;
+
+const LEVELS = ['Algebra Explorer','Equation Crusher','Proof Warrior','Calculus Cadet','Math Legend'];
+const SUBJECTS = {
+  'Algebra':     ['2x + 5 = 13', 'x² - 4 = 0', '3(x-2) = 15', 'x/4 + 3 = 7'],
+  'Geometry':    ['Area of circle r=5', 'Pythagorean: a=3, b=4', 'Volume of cube side=6'],
+  'Algebra II':  ['x² + 5x + 6 = 0', 'log₂(8) = ?', 'Simplify √72'],
+  'Pre-Calculus':['sin(30°) = ?', 'Limit x→2 of (x²-4)/(x-2)', 'Expand (x+3)³']
+};
+
+// ── PWA INSTALL ──
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (!localStorage.getItem('mathomg_install_dismissed')) {
+    document.getElementById('install-banner').classList.add('visible');
+  }
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') showToast('🎉 MathOMG installed!', true);
+  document.getElementById('install-banner').classList.remove('visible');
+  deferredInstallPrompt = null;
+});
+function dismissInstall() {
+  document.getElementById('install-banner').classList.remove('visible');
+  localStorage.setItem('mathomg_install_dismissed', '1');
+}
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('visible');
+});
+
+// ── INIT ──
+function init() {
+  updateStats();
+  renderQuickExamples();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+function updateStats() {
+  document.getElementById('xp-display').textContent = xp;
+  document.getElementById('streak-display').textContent = streak;
+  document.getElementById('streak2').textContent = streak;
+  document.getElementById('solved-display').textContent = solved;
+  const level = Math.min(Math.floor(xp / 100), LEVELS.length - 1);
+  const cur = xp % 100;
+  document.getElementById('xp-cur').textContent = cur;
+  document.getElementById('xp-fill').style.width = cur + '%';
+  document.getElementById('level-num').textContent = level + 1;
+  document.getElementById('level-title').textContent = LEVELS[level];
+}
+
+function addXP(amount) {
+  xp += amount;
+  localStorage.setItem('mathomg_xp', xp);
+  updateStats();
+}
+
+function setSubject(el, subject) {
+  document.querySelectorAll('.subject-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentSubject = subject;
+  renderQuickExamples();
+}
+
+function renderQuickExamples() {
+  const c = document.getElementById('quick-examples');
+  c.innerHTML = '';
+  (SUBJECTS[currentSubject] || []).forEach(ex => {
+    const p = document.createElement('div');
+    p.className = 'quick-pill';
+    p.textContent = ex;
+    p.onclick = () => { document.getElementById('problem-input').value = ex; };
+    c.appendChild(p);
+  });
+}
+
+function toggleUpload() { document.getElementById('upload-area').classList.toggle('active'); }
+function clearAll() {
+  document.getElementById('problem-input').value = '';
+  document.getElementById('solution-panel').classList.remove('visible');
+  document.getElementById('loading').classList.remove('visible');
+  window.speechSynthesis.cancel();
+}
+
+// ── FILE UPLOAD ──
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    document.getElementById('problem-input').value = '[Reading your worksheet...]';
+    document.getElementById('upload-area').classList.remove('active');
+    await extractFromImage(reader.result.split(',')[1]);
+  };
+  reader.readAsDataURL(file);
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-area').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFileUpload({ target: { files: [file] } });
+}
+async function extractFromImage(base64) {
+  try {
+    const resp = await callAPI({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+        { type: 'text', text: 'Extract only the math problem from this image. Return ONLY the math problem text, nothing else.' }
+      ]}]
+    });
+    document.getElementById('problem-input').value = resp.trim();
+  } catch(e) {
+    document.getElementById('problem-input').value = '';
+    showToast('Could not read image — try typing the problem', false);
+  }
+}
+
+// ── CORE API CALL ──
+async function callAPI(body) {
+  if (!ANTHROPIC_KEY) {
+    const key = prompt('Enter your Anthropic API key to use MathOMG:\n(starts with sk-ant-)');
+    if (!key) throw new Error('No API key');
+    ANTHROPIC_KEY = key.trim();
+    localStorage.setItem('mathomg_key', ANTHROPIC_KEY);
+  }
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (resp.status === 401) {
+    localStorage.removeItem('mathomg_key');
+    ANTHROPIC_KEY = '';
+    throw new Error('Invalid API key');
+  }
+
+  const data = await resp.json();
+  const raw = data.content?.map(c => c.text || '').join('') || '';
+  return raw;
+}
+
+// ── SOLVE ──
+const SYSTEM_PROMPT = `You are MathOMG — an AI math tutor for high school students. You explain math like a smart, chill older student helping a friend. NOT like a teacher or textbook.
+
+Tone: clear, confident, slightly casual. Like: "We're just trying to get x by itself, so let's move everything else outta the way." NEVER say "isolate the variable." NEVER use overly academic language.
+
+Respond with ONLY valid JSON — no markdown, no preamble, nothing outside the JSON.
+
+Format:
+{
+  "problem_parsed": "clean version of the problem",
+  "topic": "brief topic name",
+  "steps": [
+    {
+      "title": "short step title",
+      "math": "the math for this step",
+      "explanation": "casual clear explanation of what and WHY, 2-3 sentences max",
+      "audio_script": "what to say out loud, conversational 1-3 sentences peer tutor voice"
+    }
+  ],
+  "answer": "final answer",
+  "encouragement": "one short encouraging line, casual not cringe"
+}`;
+
+const MODE_PROMPTS = {
+  simple:      'Explain as simply as possible — the student is confused and needs the most basic version.',
+  stepbystep:  'Break into very detailed individual steps — skip nothing.',
+  new:         'Explain like this student has literally never seen this type of problem. Start from zero.',
+  visual:      'Use a real-world analogy or visual metaphor to explain what is happening.',
+  normal:      ''
+};
+
+async function solveProblem() {
+  const input = document.getElementById('problem-input').value.trim();
+  if (!input) { showToast('Type a problem first! 📝', false); return; }
+  currentProblem = input;
+  const mode = document.getElementById('explain-mode').value;
+
+  document.getElementById('solve-btn').disabled = true;
+  document.getElementById('loading').classList.add('visible');
+  document.getElementById('solution-panel').classList.remove('visible');
+  window.speechSynthesis.cancel();
+
+  const loaderMsgs = ['Working it out...', 'Breaking it down...', 'Almost there...'];
+  let li = 0;
+  const lt = setInterval(() => { document.getElementById('loader-text').textContent = loaderMsgs[li++ % loaderMsgs.length]; }, 1400);
+
+  try {
+    const extra = MODE_PROMPTS[mode] || '';
+    const raw = await callAPI({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: `Subject: ${currentSubject}\nProblem: ${input}${extra ? '\n\nInstruction: ' + extra : ''}` }]
+    });
+    clearInterval(lt);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    currentSolution = JSON.parse(clean);
+    renderSolution(currentSolution);
+    solved++;
+    localStorage.setItem('mathomg_solved', solved);
+    addXP(25);
+    showToast('🎉 Solved! +25 XP', true);
+  } catch(e) {
+    clearInterval(lt);
+    console.error(e);
+    showToast('Something went wrong — try again!', false);
+  }
+
+  document.getElementById('solve-btn').disabled = false;
+  document.getElementById('loading').classList.remove('visible');
+}
+
+function renderSolution(sol) {
+  document.getElementById('problem-display-text').textContent = sol.problem_parsed || currentProblem;
+  document.getElementById('answer-value').textContent = sol.answer || '—';
+  document.getElementById('chat-messages').innerHTML = '';
+
+  const container = document.getElementById('steps-container');
+  container.innerHTML = '';
+  (sol.steps || []).forEach((step, i) => {
+    const card = document.createElement('div');
+    card.className = 'step-card' + (i === 0 ? ' open' : '');
+    card.style.animationDelay = `${i * 0.08}s`;
+    const audioScript = (step.audio_script || '').replace(/'/g, "\\'");
+    card.innerHTML = `
+      <div class="step-head" onclick="this.parentElement.classList.toggle('open');this.querySelector('.step-chevron').style.transform=this.parentElement.classList.contains('open')?'rotate(180deg)':''">
+        <div class="step-num">${i+1}</div>
+        <div class="step-title-text">${step.title || ''}</div>
+        ${step.math ? `<div class="step-math">${step.math}</div>` : ''}
+        <div class="step-chevron" style="${i===0?'transform:rotate(180deg)':''}">▼</div>
+      </div>
+      <div class="step-body">
+        <div class="step-why">${(step.explanation||'').replace(/`([^`]+)`/g,'<span class="highlight">$1</span>')}</div>
+        <div class="step-audio-row">
+          <div class="play-btn" onclick="toggleAudio(this,'${audioScript}',event)">▶</div>
+          <span class="audio-label">🔊 Hear this explained</span>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+
+  if (sol.encouragement) {
+    const enc = document.createElement('div');
+    enc.style.cssText = 'padding:10px 14px;background:rgba(106,247,200,0.06);border:1px solid rgba(106,247,200,0.15);border-radius:10px;font-size:0.85rem;color:var(--accent3);text-align:center;margin-bottom:14px;';
+    enc.textContent = '✨ ' + sol.encouragement;
+    container.appendChild(enc);
+  }
+
+  document.getElementById('solution-panel').classList.add('visible');
+  setTimeout(() => document.getElementById('solution-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+// ── AUDIO ──
+let playingBtn = null;
+function toggleAudio(btn, script, event) {
+  event.stopPropagation();
+  if (btn.classList.contains('playing')) { window.speechSynthesis.cancel(); return; }
+  window.speechSynthesis.cancel();
+  if (!script) return;
+  const u = new SpeechSynthesisUtterance(script);
+  u.rate = 0.95; u.pitch = 1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US English') || (v.lang === 'en-US' && !v.name.includes('Male')));
+  if (v) u.voice = v;
+  btn.classList.add('playing'); btn.textContent = '⏸'; playingBtn = btn;
+  u.onend = u.onerror = () => { btn.classList.remove('playing'); btn.textContent = '▶'; playingBtn = null; };
+  window.speechSynthesis.speak(u);
+}
+function playAllAudio() {
+  if (!currentSolution) return;
+  window.speechSynthesis.cancel();
+  const btn = document.getElementById('audio-all-btn');
+  btn.classList.add('active');
+  const script = currentSolution.steps.map(s => s.audio_script).filter(Boolean).join(' ... ');
+  const u = new SpeechSynthesisUtterance(script);
+  u.rate = 0.95; u.pitch = 1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US English') || (v.lang === 'en-US'));
+  if (v) u.voice = v;
+  u.onend = u.onerror = () => btn.classList.remove('active');
+  window.speechSynthesis.speak(u);
+}
+
+// ── RE-EXPLAIN ──
+async function reExplain(mode) {
+  if (!currentProblem) return;
+  document.getElementById('explain-mode').value = mode;
+  await solveProblem();
+}
+
+// ── FOLLOW-UP ──
+async function askFollowup() {
+  const input = document.getElementById('followup-input');
+  const q = input.value.trim();
+  if (!q || !currentSolution) return;
+  input.value = '';
+  document.getElementById('ask-btn').disabled = true;
+  addChatMsg('user', q);
+  try {
+    const raw = await callAPI({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      system: `You are MathOMG, a chill AI math tutor for high school students. The student just solved: "${currentProblem}". Answer their follow-up conversationally and concisely — like a smart older student. 2-4 sentences max. No bullet points.`,
+      messages: [{ role: 'user', content: q }]
+    });
+    addChatMsg('ai', raw.trim());
+    addXP(5);
+  } catch(e) {
+    addChatMsg('ai', "Hmm, something went wrong — try asking again!");
+  }
+  document.getElementById('ask-btn').disabled = false;
+}
+function addChatMsg(role, text) {
+  const c = document.getElementById('chat-messages');
+  const m = document.createElement('div');
+  m.className = 'chat-msg';
+  m.innerHTML = `<div class="chat-avatar ${role}">${role==='ai'?'🤯':'🧑'}</div><div class="chat-bubble ${role}">${text}</div>`;
+  c.appendChild(m);
+  c.scrollTop = c.scrollHeight;
+}
+
+// ── TOAST ──
+function showToast(msg, success=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (success ? ' success' : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── VOICE INIT ──
+if (window.speechSynthesis.onvoiceschanged !== undefined) {
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+init();
+</script>
+</body>
+</html>
